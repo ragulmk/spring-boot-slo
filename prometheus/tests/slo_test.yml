@@ -4,6 +4,7 @@ rule_files:
   - ../rules/slo.alerts.yml
 
 evaluation_interval: 1m
+fuzzy_compare: true
 
 tests:
   # 10% of requests failing = 20x burn rate -> fast page must fire
