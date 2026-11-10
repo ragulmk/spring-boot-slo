@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: orders-service
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true      # /actuator/health/liveness and /readiness
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      # Histogram buckets let Prometheus calculate p95/p99 latency.
+      percentiles-histogram:
+        "[http.server.requests]": true
+      # Guarantees an exact bucket at the 300ms latency SLO threshold.
+      slo:
+        "[http.server.requests]": 100ms, 300ms, 500ms, 1s
+
+# Chaos switches start OFF. Change at runtime via POST /chaos (see README).
+chaos:
+  error-rate: 0.0
+  latency-ms: 0
