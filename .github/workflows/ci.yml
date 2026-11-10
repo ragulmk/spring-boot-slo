@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  app:
+    name: Build & test Spring Boot app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Maven verify
+        working-directory: app
+        run: mvn -B verify
+      - name: Build Docker image
+        run: docker build -t orders-service:ci ./app
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: orders-service:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "0"   # report only; set to "1" to fail the build
+
+  slo-rules:
+    name: Validate SLO rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: promtool check + unit tests
+        run: make test-rules
+      - name: Validate dashboard JSON
+        run: jq empty grafana/dashboards/*.json
+      - name: ShellCheck
+        run: shellcheck scripts/*.sh
