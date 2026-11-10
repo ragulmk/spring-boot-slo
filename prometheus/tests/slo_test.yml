@@ -15,12 +15,12 @@ tests:
       - series: 'http_server_requests_seconds_count{job="orders-service", uri="/api/orders", method="GET", status="503", outcome="SERVER_ERROR"}'
         values: '0+10x80'
     promql_expr_test:
-      - expr: slo:sli_error:ratio_rate1h{slo="availability"}
+      - expr: 'slo:sli_error:ratio_rate1h{slo="availability"}'
         eval_time: 70m
         exp_samples:
           - labels: 'slo:sli_error:ratio_rate1h{job="orders-service", slo="availability"}'
             value: 0.1
-      - expr: slo:burn_rate:ratio_rate1h{slo="availability"}
+      - expr: 'label_replace(round(slo:burn_rate:ratio_rate1h{slo="availability"} * 1000) / 1000, "__name__", "slo:burn_rate:ratio_rate1h", "", "")'
         eval_time: 70m
         exp_samples:
           - labels: 'slo:burn_rate:ratio_rate1h{job="orders-service", slo="availability"}'
