@@ -1,4 +1,4 @@
-PROM_IMAGE  := prom/prometheus:v3.4.1
+PROM_IMAGE  := prom/prometheus:v3.5.0
 MAVEN_IMAGE := maven:3.9-eclipse-temurin-21
 
 .PHONY: help up down logs test test-app test-rules chaos-errors chaos-latency chaos-off reset
