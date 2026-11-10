@@ -1,0 +1,88 @@
+# Unit tests for SLO rules. Run with:  make test-rules
+rule_files:
+  - ../rules/slo.recording.yml
+  - ../rules/slo.alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # 10% of requests failing = 20x burn rate -> fast page must fire
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="orders-service", uri="/api/orders", method="GET", status="200", outcome="SUCCESS"}'
+        values: '0+90x80'
+      - series: 'http_server_requests_seconds_count{job="orders-service", uri="/api/orders", method="GET", status="503", outcome="SERVER_ERROR"}'
+        values: '0+10x80'
+    promql_expr_test:
+      - expr: slo:sli_error:ratio_rate1h{slo="availability"}
+        eval_time: 70m
+        exp_samples:
+          - labels: 'slo:sli_error:ratio_rate1h{job="orders-service", slo="availability"}'
+            value: 0.1
+      - expr: slo:burn_rate:ratio_rate1h{slo="availability"}
+        eval_time: 70m
+        exp_samples:
+          - labels: 'slo:burn_rate:ratio_rate1h{job="orders-service", slo="availability"}'
+            value: 20
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SLOAvailabilityBurnRateFast
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: orders-service
+              slo: availability
+            exp_annotations:
+              summary: "orders-service is burning its availability error budget 14.4x too fast"
+              description: "At this rate the service spends 2% of the 30-day budget in 1 hour for the availability (99.5% non-5xx) SLO (1h and 5m windows)."
+              runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOAvailabilityBurnRate.md"
+
+  # 0.2% errors = 0.4x burn rate -> healthy, nothing should fire
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="orders-service", uri="/api/orders", method="GET", status="200", outcome="SUCCESS"}'
+        values: '0+998x80'
+      - series: 'http_server_requests_seconds_count{job="orders-service", uri="/api/orders", method="GET", status="500", outcome="SERVER_ERROR"}'
+        values: '0+2x80'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SLOAvailabilityBurnRateFast
+        exp_alerts: []
+      - eval_time: 70m
+        alertname: SLOAvailabilityBurnRateMedium
+        exp_alerts: []
+
+  # Errors on non-/api routes (e.g. actuator) must NOT count against the SLO
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{job="orders-service", uri="/api/orders", method="GET", status="200", outcome="SUCCESS"}'
+        values: '0+100x80'
+      - series: 'http_server_requests_seconds_count{job="orders-service", uri="/actuator/prometheus", method="GET", status="500", outcome="SERVER_ERROR"}'
+        values: '0+50x80'
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: SLOAvailabilityBurnRateFast
+        exp_alerts: []
+
+  # Latency: 5% of requests slower than 300ms = 5x burn on a 1% budget -> slow ticket alert
+  - interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_bucket{job="orders-service", uri="/api/orders", method="GET", status="200", outcome="SUCCESS", le="0.3"}'
+        values: '0+95x1500'
+      - series: 'http_server_requests_seconds_count{job="orders-service", uri="/api/orders", method="GET", status="200", outcome="SUCCESS"}'
+        values: '0+100x1500'
+    alert_rule_test:
+      - eval_time: 1440m
+        alertname: SLOLatencyBurnRateSlow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: orders-service
+              slo: latency
+            exp_annotations:
+              summary: "orders-service is burning its latency error budget 3x too fast"
+              description: "At this rate the service spends 10% of the 30-day budget in 1 day for the latency (99% under 300ms) SLO (1d and 2h windows)."
+              runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOLatencyBurnRate.md"
+      - eval_time: 1440m
+        alertname: SLOLatencyBurnRateFast
+        exp_alerts: []

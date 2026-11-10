@@ -1,0 +1,106 @@
+# Multi-window, multi-burn-rate SLO alerts.
+# Each alert needs BOTH a long window (is it significant?) and a short window
+# (is it still happening?) to exceed the burn-rate threshold. This catches real
+# incidents fast while staying quiet for brief blips, and resets quickly after recovery.
+groups:
+  - name: slo.availability.alerts
+    rules:
+      - alert: SLOAvailabilityBurnRateFast
+        expr: |
+          slo:sli_error:ratio_rate1h{slo="availability"} > (14.4 * 0.005)
+          and
+          slo:sli_error:ratio_rate5m{slo="availability"} > (14.4 * 0.005)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is burning its availability error budget 14.4x too fast"
+          description: "At this rate the service spends 2% of the 30-day budget in 1 hour for the availability (99.5% non-5xx) SLO (1h and 5m windows)."
+          runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOAvailabilityBurnRate.md"
+      - alert: SLOAvailabilityBurnRateMedium
+        expr: |
+          slo:sli_error:ratio_rate6h{slo="availability"} > (6 * 0.005)
+          and
+          slo:sli_error:ratio_rate30m{slo="availability"} > (6 * 0.005)
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is burning its availability error budget 6x too fast"
+          description: "At this rate the service spends 5% of the 30-day budget in 6 hours for the availability (99.5% non-5xx) SLO (6h and 30m windows)."
+          runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOAvailabilityBurnRate.md"
+      - alert: SLOAvailabilityBurnRateSlow
+        expr: |
+          slo:sli_error:ratio_rate1d{slo="availability"} > (3 * 0.005)
+          and
+          slo:sli_error:ratio_rate2h{slo="availability"} > (3 * 0.005)
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} is burning its availability error budget 3x too fast"
+          description: "At this rate the service spends 10% of the 30-day budget in 1 day for the availability (99.5% non-5xx) SLO (1d and 2h windows)."
+          runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOAvailabilityBurnRate.md"
+      - alert: SLOAvailabilityBurnRateSlower
+        expr: |
+          slo:sli_error:ratio_rate3d{slo="availability"} > (1 * 0.005)
+          and
+          slo:sli_error:ratio_rate6h{slo="availability"} > (1 * 0.005)
+        for: 3h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} is burning its availability error budget 1x too fast"
+          description: "At this rate the service spends 10% of the 30-day budget in 3 days for the availability (99.5% non-5xx) SLO (3d and 6h windows)."
+          runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOAvailabilityBurnRate.md"
+
+  - name: slo.latency.alerts
+    rules:
+      - alert: SLOLatencyBurnRateFast
+        expr: |
+          slo:sli_error:ratio_rate1h{slo="latency"} > (14.4 * 0.01)
+          and
+          slo:sli_error:ratio_rate5m{slo="latency"} > (14.4 * 0.01)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is burning its latency error budget 14.4x too fast"
+          description: "At this rate the service spends 2% of the 30-day budget in 1 hour for the latency (99% under 300ms) SLO (1h and 5m windows)."
+          runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOLatencyBurnRate.md"
+      - alert: SLOLatencyBurnRateMedium
+        expr: |
+          slo:sli_error:ratio_rate6h{slo="latency"} > (6 * 0.01)
+          and
+          slo:sli_error:ratio_rate30m{slo="latency"} > (6 * 0.01)
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is burning its latency error budget 6x too fast"
+          description: "At this rate the service spends 5% of the 30-day budget in 6 hours for the latency (99% under 300ms) SLO (6h and 30m windows)."
+          runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOLatencyBurnRate.md"
+      - alert: SLOLatencyBurnRateSlow
+        expr: |
+          slo:sli_error:ratio_rate1d{slo="latency"} > (3 * 0.01)
+          and
+          slo:sli_error:ratio_rate2h{slo="latency"} > (3 * 0.01)
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} is burning its latency error budget 3x too fast"
+          description: "At this rate the service spends 10% of the 30-day budget in 1 day for the latency (99% under 300ms) SLO (1d and 2h windows)."
+          runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOLatencyBurnRate.md"
+      - alert: SLOLatencyBurnRateSlower
+        expr: |
+          slo:sli_error:ratio_rate3d{slo="latency"} > (1 * 0.01)
+          and
+          slo:sli_error:ratio_rate6h{slo="latency"} > (1 * 0.01)
+        for: 3h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.job }} is burning its latency error budget 1x too fast"
+          description: "At this rate the service spends 10% of the 30-day budget in 3 days for the latency (99% under 300ms) SLO (3d and 6h windows)."
+          runbook_url: "https://github.com/ragulmk/spring-boot-slo/blob/main/runbooks/SLOLatencyBurnRate.md"
